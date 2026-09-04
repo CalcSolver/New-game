@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BLOCK SURVIVAL: Ultimate Edition</title>
+<style>
+  :root{
+    --mc-bg: #222222;
+    --mc-panel: rgba(16,16,16,0.88);
+    --mc-border: #4a4a4a;
+    --mc-btn: #3c3c3c;
+    --mc-btn-hover: #5a5a5a;
+    --mc-accent: #55ff55;
+    --danger: #ff3b3b;
+    --holy: #4fd6ff;
+    --gold: #ffd700;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{
+    margin:0; padding:0; width:100%; height:100%; overflow:hidden;
+    background:#111; font-family:'Courier New', Courier, monospace;
+    user-select:none;
+  }
+  #gameCanvas{ position:fixed; top:0; left:0; width:100%; height:100%; display:block; outline:none; }
+
+  /* ---------- Minecraft Style UI Screens ---------- */
+  .mc-screen{
+    position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.82); z-index:60; padding:20px; color:#fff;
+  }
+  .mc-title{
+    font-size:3em; letter-spacing:4px; color:#ffaa00; text-shadow:3px 3px #000; margin-bottom:24px;
+    text-align:center;
+  }
+  .mc-box{
+    background:rgba(30,30,30,0.92); border:4px solid #000; padding:24px; border-radius:4px;
+    width:420px; max-width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.7);
+  }
+  .mc-label{ display:block; margin-bottom:8px; font-size:14px; color:#aaa; letter-spacing:1px; }
+  .mc-input, .mc-select{
+    width:100%; padding:12px; background:#111; border:2px solid #555; color:#fff; font-family:inherit;
+    font-size:15px; margin-bottom:16px; border-radius:2px;
+  }
+  .mc-input:focus, .mc-select:focus{ border-color:var(--mc-accent); outline:none; }
+  .mc-btn{
+    width:100%; padding:14px; background:var(--mc-btn); border:2px solid #000; color:#fff;
+    font-family:inherit; font-size:16px; font-weight:bold; letter-spacing:2px; cursor:pointer;
+    box-shadow:inset 0 2px 0 rgba(255,255,255,0.2), 0 4px 0 #111; margin-bottom:10px;
+    text-transform:uppercase; text-shadow:1px 1px #000;
+  }
+  .mc-btn:hover{ background:var(--mc-btn-hover); border-color:#888; }
+  .mc-btn:active{ transform:translateY(2px); box-shadow:inset 0 1px 0 rgba(255,255,255,0.2), 0 2px 0 #111; }
+  
+  .btn-iconic-death {
+    background: linear-gradient(180deg, #8b0000, #400000);
+    border: 3px solid #ff3b3b;
+    box-shadow: 0 0 20px rgba(255,59,59,0.7), inset 0 0 10px rgba(255,59,59,0.5);
+    margin-top: 16px;
+  }
+  .btn-iconic-death:hover {
+    background: linear-gradient(180deg, #a80000, #5c0000);
+    box-shadow: 0 0 30px rgba(255,59,59,0.9);
+  }
+
+  .hidden{ display:none !important; }
+
+  /* ---------- HUD ---------- */
+  #hud{ position:fixed; inset:0; pointer-events:none; z-index:20; font-family:'Courier New',monospace; }
+  .hudPanel{
+    position:absolute; background:rgba(10,14,10,0.75); border:2px solid #3a5c3a; border-radius:4px;
+    color:#e8ffe0; padding:8px 12px; font-size:13px; letter-spacing:1px; pointer-events:auto;
+  }
+  #healthPanel{ top:14px; left:14px; width:220px; }
+  #healthLabel{ display:flex; justify-content:space-between; margin-bottom:4px; font-size:11px; color:#bdf0b0;}
+  #healthBarOuter{ width:100%; height:14px; background:#1a1a1a; border:1px solid #444; border-radius:2px; overflow:hidden;}
+  #healthBarInner{ height:100%; width:100%; background:linear-gradient(90deg,#7CFC00,#3aa000); transition:width 0.15s linear; }
+
+  #ammoPanel{ bottom:16px; right:16px; text-align:right; }
+  #ammoPanel .big{ font-size:24px; color:#fff; }
+  #ammoPanel .small{ font-size:12px; color:#9fc98f; }
+  #reloadTag{ color:#ffcf3b; font-size:11px; margin-top:2px; }
+
+  #inventoryPanel{ top:14px; right:14px; text-align:right; }
+  #inventoryPanel .invRow{ margin:3px 0; font-size:12px; color:#ffd700; }
+
+  #biomePanel{ bottom:16px; left:14px; font-size:13px; color:#dfe; }
+  #biomePanel .biomeName{ color:var(--mc-accent); font-weight:bold; letter-spacing:2px; }
+
+  #crosshair{
+    position:absolute; top:50%; left:50%; width:20px; height:20px; margin:-10px 0 0 -10px; pointer-events:none;
+  }
+  #crosshair::before, #crosshair::after{
+    content:''; position:absolute; background:#eaffe0; box-shadow:0 0 3px #000;
+  }
+  #crosshair::before{ left:50%; top:0; width:2px; height:100%; margin-left:-1px; }
+  #crosshair::after{ top:50%; left:0; height:2px; width:100%; margin-top:-1px; }
+  #crosshair.hit{ filter: drop-shadow(0 0 4px #ff3b3b); }
+
+  #minimapWrap{ position:absolute; top:14px; left:50%; transform:translateX(-50%); text-align:center; }
+  #minimapCanvas{ border:2px solid #3a5c3a; border-radius:50%; background:#123; }
+  #minimapWrap .cap{ font-size:9px; color:#9fc98f; margin-top:2px; }
+
+  #messages{
+    position:absolute; bottom:140px; left:50%; transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; gap:4px; pointer-events:none;
+  }
+  .msg{
+    background:rgba(0,0,0,0.75); border:1px solid #3a5c3a; color:#eaffe0;
+    padding:6px 14px; border-radius:3px; font-size:13px; transition:opacity 0.6s ease;
+  }
+
+  #damageFlash{ position:fixed; inset:0; pointer-events:none; z-index:25;
+    background:radial-gradient(ellipse at center, rgba(255,0,0,0) 40%, rgba(180,0,0,0.55) 100%);
+    opacity:0; transition:opacity 0.15s ease-out; }
+  #lowHealthPulse{ position:fixed; inset:0; pointer-events:none; z-index:24;
+    box-shadow: inset 0 0 120px 20px rgba(255,0,0,0); transition: box-shadow 0.3s ease; }
+
+  #reticleHint{ position:absolute; top:56%; left:50%; transform:translateX(-50%); font-size:12px; color:#dfe; opacity:0; transition:opacity 0.25s; text-align:center; text-shadow:0 0 4px #000; pointer-events:none;}
+  #reticleHint.show{ opacity:1; }
+
+  /* ---------- Mobile Virtual Controls ---------- */
+  #mobileControls{ position:fixed; inset:0; pointer-events:none; z-index:30; display:none; }
+  .touch-active #mobileControls{ display:block; }
+  #virtualJoystick{
+    position:absolute; bottom:30px; left:30px; width:130px; height:130px;
+    background:rgba(255,255,255,0.08); border:2px solid rgba(255,255,255,0.2);
+    border-radius:50%; pointer-events:auto; touch-action:none;
+  }
+  #joystickHandle{
+    position:absolute; top:40px; left:40px; width:50px; height:50px;
+    background:rgba(85,255,85,0.5); border:2px solid var(--mc-accent);
+    border-radius:50%; pointer-events:none; transition: transform 0.05s linear;
+  }
+  .mob-btn-group{
+    position:absolute; bottom:30px; right:30px; display:flex; flex-direction:column; gap:10px; pointer-events:auto;
+  }
+  .mob-row{ display:flex; gap:10px; justify-content:flex-end; }
+  .mob-btn{
+    width:60px; height:60px; background:rgba(10,14,10,0.75); border:2px solid #4a4a4a;
+    border-radius:50%; color:#fff; font-size:12px; font-weight:bold; display:flex;
+    align-items:center; justify-content:center; cursor:pointer; touch-action:manipulation;
+  }
+  .mob-btn:active{ background:rgba(40,80,40,0.85); border-color:var(--mc-accent); }
+  #fireMobBtn{ background:rgba(180,30,30,0.6); border-color:var(--danger); width:70px; height:70px; }
+  #lookPad{ position:absolute; top:0; right:0; width:50%; height:70%; pointer-events:auto; touch-action:none; }
+
+  ::selection{ background:transparent; }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<!-- ============ MINECRAFT MAIN MENU SCREEN ============ -->
+<div class="mc-screen" id="mainMenuScreen">
+  <div class="mc-title">&#9635; BLOCK SURVIVAL &#9635;</div>
+  <div class="mc-box">
+    <button class="mc-btn" id="singleplayerBtn">Singleplayer</button>
+    <button class="mc-btn" id="optionsBtn">Options &amp; Controls</button>
+    <button class="mc-btn" id="quitBtn" style="opacity:0.6;">Quit Game</button>
+  </div>
+</div>
+
+<!-- ============ CREATE WORLD SCREEN ============ -->
+<div class="mc-screen hidden" id="createWorldScreen">
+  <div class="mc-title" style="font-size:2.2em;">Create New World</div>
+  <div class="mc-box">
+    <label class="mc-label">World Name</label>
+    <input type="text" class="mc-input" id="worldNameInput" value="Zombie Island Survival">
+
+    <label class="mc-label">Game Mode</label>
+    <select class="mc-select" id="gameModeSelect">
+      <option value="survival">Survival (Zombies, Loot &amp; Totem Crafting)</option>
+      <option value="creative">Creative (Invincible, Flight &amp; All Weapons)</option>
+    </select>
+
+    <label class="mc-label">Camera Perspective</label>
+    <select class="mc-select" id="camPerspectiveSelect">
+      <option value="1">First Person</option>
+      <option value="3">Third Person</option>
+    </select>
+
+    <button class="mc-btn" id="createWorldBtn" style="background:#2d8a2d;">Create New World</button>
+    <button class="mc-btn" id="cancelCreateBtn">Cancel</button>
+  </div>
+</div>
+
+<!-- ============ OPTIONS SCREEN ============ -->
+<div class="mc-screen hidden" id="optionsScreen">
+  <div class="mc-title" style="font-size:2.2em;">Controls &amp; Info</div>
+  <div class="mc-box" style="text-align:left; font-size:0.85em; line-height:1.6;">
+    <div><b>W A S D / Joystick:</b> Move</div>
+    <div><b>Mouse / Right Pad:</b> Look &amp; Aim</div>
+    <div><b>Left Click / Shoot Btn:</b> Fire Weapon / Throw Grenade</div>
+    <div><b>R / Reload Btn:</b> Reload Weapon</div>
+    <div><b>F / Action Btn:</b> Interact / Cure / Talk / Priest Blessing</div>
+    <div><b>Space / Jump:</b> Jump (Fly up in Creative)</div>
+    <div><b>G:</b> Throw Grenade / Bomb</div>
+    <div><b>C:</b> Cycle 20+ Weapons</div>
+    <button class="mc-btn" id="backOptionsBtn" style="margin-top:16px;">Back</button>
+  </div>
+</div>
+
+<!-- ============ PAUSE SCREEN ============ -->
+<div class="mc-screen hidden" id="pauseScreen">
+  <div class="mc-title">Game Menu</div>
+  <div class="mc-box">
+    <button class="mc-btn" id="resumeBtn">Back to Game</button>
+    <button class="mc-btn" id="menuBtn">Save and Quit to Title</button>
+  </div>
+</div>
+
+<!-- ============ GAME OVER ============ -->
+<div class="mc-screen hidden" id="gameOverScreen">
+  <div class="mc-title" style="color:var(--danger);">&#9760; YOU DIED &#9760;</div>
+  <div class="mc-box" style="text-align:center;">
+    <p id="gameOverStats" style="margin-bottom:20px; line-height:1.5;"></p>
+    <button class="mc-btn btn-iconic-death" id="restartBtnDead">
+      <span style="font-size:1.3em;">&#9763;</span> RESPAWN <span style="font-size:1.3em;">&#9763;</span>
+    </button>
+    <button class="mc-btn" id="titleBtnDead" style="margin-top:10px;">Title Screen</button>
+  </div>
+</div>
+
+<!-- ============ VICTORY ============ -->
+<div class="mc-screen hidden" id="victoryScreen">
+  <div class="mc-title" style="color:var(--holy);">&#10022; ISLAND CURED &#10022;</div>
+  <div class="mc-box" style="text-align:center;">
+    <p id="victoryStats" style="margin-bottom:20px; line-height:1.5;"></p>
+    <button class="mc-btn" id="restartBtnWin">Play Again</button>
+    <button class="mc-btn" id="titleBtnWin" style="margin-top:10px;">Title Screen</button>
+  </div>
+</div>
+
+<!-- ============ HUD ============ -->
+<div id="hud" class="hidden">
+  <div class="hudPanel" id="healthPanel">
+    <div id="healthLabel"><span>HEALTH</span><span id="healthNum">100</span></div>
+    <div id="healthBarOuter"><div id="healthBarInner"></div></div>
+  </div>
+
+  <div class="hudPanel" id="ammoPanel">
+    <div class="big"><span id="ammoInMag">30</span> / <span id="ammoReserve">120</span></div>
+    <div class="small" id="weaponNameLabel">Pistol MK1</div>
+    <div id="reloadTag" class="hidden">RELOADING...</div>
+  </div>
+
+  <div class="hudPanel" id="inventoryPanel">
+    <div class="invRow">GOLD: <span id="goldNum">0</span> 🪙</div>
+    <div class="invRow" id="totemStatus">TOTEM: <span style="color:#ff3b3b">None</span></div>
+    <div class="invRow" style="font-size:11px; color:#aaa;" id="matsList">Red:0 | Stn:0 | Gld:0 | Emr:0</div>
+  </div>
+
+  <div class="hudPanel" id="biomePanel">
+    <span class="biomeName" id="biomeName">PLAINS</span>
+  </div>
+
+  <div id="minimapWrap">
+    <canvas id="minimapCanvas" width="140" height="140"></canvas>
+    <div class="cap">&#9650; = you &nbsp;|&nbsp; &#9679; = zombie &nbsp;|&nbsp; 🏴 = ship</div>
+  </div>
+
+  <div id="crosshair"></div>
+  <div id="reticleHint"></div>
+  <div id="messages"></div>
+</div>
+
+<!-- ============ MOBILE VIRTUAL CONTROLS ============ -->
+<div id="mobileControls">
+  <div id="lookPad"></div>
+  <div id="virtualJoystick">
+    <div id="joystickHandle"></div>
+  </div>
+  <div class="mob-btn-group">
+    <div class="mob-row">
+      <div class="mob-btn" id="jumpMobBtn">JUMP</div>
+      <div class="mob-btn" id="reloadMobBtn">RELOAD</div>
+    </div>
+    <div class="mob-row">
+      <div class="mob-btn" id="actionMobBtn">ACTION</div>
+      <div class="mob-btn" id="fireMobBtn">SHOOT</div>
+    </div>
+  </div>
+</div>
+
+<div id="damageFlash"></div>
+<div id="lowHealthPulse"></div>
+
+<!-- ============ THREE.JS (CDN) ============ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+(function(){
+"use strict";
+
+if (typeof THREE === 'undefined') {
+  document.body.innerHTML = '<div style="color:red;padding:40px;font-size:24px;">Three.js failed to load. Check internet connection.</div>';
+  return;
+}
+
+try {
+  // =========================================================================================
+  // GAME CONFIG & 20+ WEAPONS DEFINITIONS
+  // =========================================================================================
+  const WORLD_RADIUS   = 220;
+  const CITY_RADIUS     = 35;
+  const BEACH_WIDTH     = 32;
+  const SECTOR_HALF     = 0.85;
+  const GROUND_SIZE     = 480;
+  const GROUND_SEGMENTS = 100;
+
+  const EYE_HEIGHT   = 1.7;
+  const PLAYER_RADIUS = 0.45;
+  const GRAVITY       = -28;
+  const JUMP_SPEED    = 9.5;
+  const WALK_SPEED    = 7.2;
+
+  // 20+ Unique Guns & Explosives
+  const WEAPONS = [
+    { name: "Pistol MK1", mag: 15, damage: 35, rate: 0.18, reload: 1.4, color: 0x333333 },
+    { name: "Combat Pistol", mag: 18, damage: 40, rate: 0.15, reload: 1.3, color: 0x4a4a4a },
+    { name: "Revolver .44", mag: 6, damage: 85, rate: 0.40, reload: 2.1, color: 0x8b5a2b },
+    { name: "Silenced Pistol", mag: 15, damage: 30, rate: 0.14, reload: 1.2, color: 0x1a1a1a },
+    { name: "Machine Pistol", mag: 30, damage: 22, rate: 0.08, reload: 1.5, color: 0x2b2b2b },
+    { name: "Submachine Gun", mag: 32, damage: 28, rate: 0.10, reload: 1.6, color: 0x555555 },
+    { name: "Tactical SMG", mag: 40, damage: 26, rate: 0.09, reload: 1.7, color: 0x3d4448 },
+    { name: "Assault Rifle M4", mag: 30, damage: 45, rate: 0.12, reload: 1.8, color: 0x2d3830 },
+    { name: "AK-47 Classic", mag: 30, damage: 52, rate: 0.13, reload: 2.0, color: 0x5c4033 },
+    { name: "Scout Rifle", mag: 10, damage: 75, rate: 0.25, reload: 1.8, color: 0x42382f },
+    { name: "Heavy Carbine", mag: 25, damage: 58, rate: 0.14, reload: 1.9, color: 0x2e3532 },
+    { name: "Bullpup Rifle", mag: 35, damage: 48, rate: 0.11, reload: 1.7, color: 0x3a3f44 },
+    { name: "Light Machine Gun", mag: 75, damage: 44, rate: 0.10, reload: 3.2, color: 0x222222 },
+    { name: "Heavy Machine Gun", mag: 100, damage: 55, rate: 0.09, reload: 3.8, color: 0x1b1f23 },
+    { name: "Pump Shotgun", mag: 8, damage: 110, rate: 0.65, reload: 2.5, color: 0x5c4028 },
+    { name: "Tactical Shotgun", mag: 12, damage: 95, rate: 0.45, reload: 2.8, color: 0x2b2b2b },
+    { name: "Double Barrel", mag: 2, damage: 150, rate: 0.30, reload: 1.8, color: 0x6e472c },
+    { name: "Sniper Rifle", mag: 5, damage: 180, rate: 0.90, reload: 2.6, color: 0x1e242b },
+    { name: "Anti-Materiel Sniper", mag: 5, damage: 250, rate: 1.20, reload: 3.0, color: 0x111111 },
+    { name: "Plasma Blaster", mag: 50, damage: 65, rate: 0.10, reload: 1.5, color: 0x00aaff },
+    { name: "Laser Rifle", mag: 60, damage: 70, rate: 0.09, reload: 1.4, color: 0xff3333 },
+    { name: "Frag Grenade Launcher", mag: 6, damage: 220, rate: 0.80, reload: 2.5, color: 0x4a5d4e },
+    { name: "Holy Water Flask Launcher", mag: 4, damage: 0, rate: 1.0, reload: 2.2, color: 0x4fd6ff }
+  ];
+
+  // =========================================================================================
+  // DOM REFS
+  // =========================================================================================
+  const canvas          = document.getElementById('gameCanvas');
+  const mainMenuScreen  = document.getElementById('mainMenuScreen');
+  const singleplayerBtn = document.getElementById('singleplayerBtn');
+  const optionsBtn      = document.getElementById('optionsBtn');
+  const createWorldScreen = document.getElementById('createWorldScreen');
+  const createWorldBtn  = document.getElementById('createWorldBtn');
+  const cancelCreateBtn = document.getElementById('cancelCreateBtn');
+  const optionsScreen   = document.getElementById('optionsScreen');
+  const backOptionsBtn  = document.getElementById('backOptionsBtn');
+  const pauseScreen     = document.getElementById('pauseScreen');
+  const resumeBtn       = document.getElementById('resumeBtn');
+  const menuBtn         = document.getElementById('menuBtn');
+  const gameOverScreen  = document.getElementById('gameOverScreen');
+  const gameOverStats   = document.getElementById('gameOverStats');
+  const restartBtnDead  = document.getElementById('restartBtnDead');
+  const titleBtnDead    = document.getElementById('titleBtnDead');
+  const victoryScreen   = document.getElementById('victoryScreen');
+  const victoryStats    = document.getElementById('victoryStats');
+  const restartBtnWin   = document.getElementById('restartBtnWin');
+  const titleBtnWin     = document.getElementById('titleBtnWin');
+  const hud             = document.getElementById('hud');
+  const healthBarInner  = document.getElementById('healthBarInner');
+  const healthNum       = document.getElementById('healthNum');
+  const ammoInMagEl     = document.getElementById('ammoInMag');
+  const ammoReserveEl   = document.getElementById('ammoReserve');
+  const weaponNameLabel = document.getElementById('weaponNameLabel');
+  const reloadTag       = document.getElementById('reloadTag');
+  const goldNumEl       = document.getElementById('goldNum');
+  const totemStatusEl   = document.getElementById('totemStatus');
+  const matsListEl      = document.getElementById('matsList');
+  const biomeNameEl     = document.getElementById('biomeName');
+  const minimapCanvas   = document.getElementById('minimapCanvas');
+  const minimapCtx      = minimapCanvas.getContext('2d');
+  const messagesEl      = document.getElementById('messages');
+  const damageFlashEl   = document.getElementById('damageFlash');
+  const lowHealthPulseEl= document.getElementById('lowHealthPulse');
+  const crosshairEl     = document.getElementById('crosshair');
+  const reticleHintEl   = document.getElementById('reticleHint');
+
+  // Mobile elements
+  const virtualJoystick = document.getElementById('virtualJoystick');
+  const joystickHandle  = document.getElementById('joystickHandle');
+  const lookPad         = document.getElementById('lookPad');
+  const jumpMobBtn      = document.getElementById('jumpMobBtn');
+  const reloadMobBtn    = document.getElementById('reloadMobBtn');
+  const actionMobBtn    = document.getElementById('actionMobBtn');
+  const fireMobBtn      = document.getElementById('fireMobBtn');
+
+  const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  if (isTouchDevice) document.body.classList.add('touch-active');
+
+  // =========================================================================================
+  // AUDIO (WebAudio SFX)
+  // =========================================================================================
+  let audioCtx = null;
+  function ensureAudio(){
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch(e){ audioCtx = null; }
+    }
+  }
+  function blip(freqStart, freqEnd, dur, type, vol){
+    if (!audioCtx) return;
+    try{
+      const t0 = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type || 'square';
+      osc.frequency.setValueAtTime(freqStart, t0);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(freqEnd,1), t0 + dur);
+      gain.gain.setValueAtTime(vol || 0.15, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(t0); osc.stop(t0 + dur);
+    }catch(e){}
+  }
+  function playShootSound(){ blip(800,120,0.08,'sawtooth',0.12); }
+  function playExplosionSound(){ blip(140,20,0.5,'sawtooth',0.25); }
+  function playHitSound(){ blip(300,90,0.12,'square',0.09); }
+  function playHurtSound(){ blip(160,60,0.25,'sawtooth',0.14); }
+  function playCureSound(){ blip(500,1200,0.4,'sine',0.15); }
+  function playPickupSound(){ blip(600,950,0.15,'sine',0.12); }
+  function playReloadSound(){ blip(200,420,0.2,'triangle',0.09); }
+
+  function showMessage(text){
+    const el = document.createElement('div');
+    el.className = 'msg';
+    el.textContent = text;
+    messagesEl.appendChild(el);
+    setTimeout(()=>{ el.style.opacity = '0'; }, 2200);
+    setTimeout(()=>{ el.remove(); }, 2900);
+    while (messagesEl.children.length > 4) messagesEl.removeChild(messagesEl.firstChild);
+  }
+
+  // =========================================================================================
+  // WORLD GENERATION HELPERS
+  // =========================================================================================
+  function angleDist(a, b){
+    let d = Math.abs(a - b);
+    if (d > Math.PI) d = Math.PI * 2 - d;
+    return d;
+  }
+  function getBiome(x, z){
+    const dist = Math.sqrt(x*x + z*z);
+    if (dist > WORLD_RADIUS - BEACH_WIDTH) return 'beach';
+    if (dist < CITY_RADIUS) return 'city';
+    const angle = Math.atan2(z, x);
+    if (angleDist(angle, 0) < SECTOR_HALF) return 'desert';
+    if (angleDist(angle, Math.PI) < SECTOR_HALF) return 'mountain';
+    return 'plains';
+  }
+  function getBiomeLabel(biome){
+    switch(biome){
+      case 'city': return 'THE BIG CITY';
+      case 'beach': return 'THE COAST';
+      case 'desert': return 'THE DESERT';
+      case 'mountain': return 'THE MOUNTAINS';
+      default: return 'THE OUTSKIRTS';
+    }
+  }
+  function getHeight(x, z){
+    const biome = getBiome(x, z);
+    if (biome === 'city') return 0;
+    if (biome === 'beach') return -0.6;
+    if (biome === 'desert') return Math.sin(x*0.045)*1.1*Math.cos(z*0.05) + 0.4;
+    if (biome === 'mountain') {
+      const dist = Math.sqrt(x*x + z*z);
+      return Math.min(Math.max(0, (dist - CITY_RADIUS)*0.16) + Math.sin(x*0.09)*Math.cos(z*0.11)*3.2, 42);
+    }
+    return Math.sin(x*0.028)*0.6*Math.cos(z*0.03);
+  }
+  function getColor(x, z, h, biome){
+    let r=0.32, g=0.53, b=0.27;
+    if (biome==='city') { r=0.52; g=0.53; b=0.56; }
+    else if (biome==='beach') { r=0.86; g=0.78; b=0.55; }
+    else if (biome==='desert') { r=0.87; g=0.72; b=0.36; }
+    else if (biome==='mountain') { r=0.48; g=0.45; b=0.42; if(h>24){r=0.95;g=0.95;b=0.98;} }
+    return {r,g,b};
+  }
+
+  // =========================================================================================
+  // THREE.JS SCENE SETUP
+  // =========================================================================================
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x9fd4f0);
+  scene.fog = new THREE.Fog(0x9fd4f0, 90, WORLD_RADIUS * 1.35);
+
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.rotation.order = 'YXZ';
+
+  const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  scene.add(new THREE.HemisphereLight(0xbfe3ff, 0x3c4a2e, 0.85));
+  const sun = new THREE.DirectionalLight(0xfff3d6, 0.95);
+  sun.position.set(120, 180, 80);
+  scene.add(sun, new THREE.AmbientLight(0xffffff, 0.3));
+
+  // =========================================================================================
+  // WORLD MESH & PROPS
+  // =========================================================================================
+  const groundGeo = new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE, GROUND_SEGMENTS, GROUND_SEGMENTS);
+  groundGeo.rotateX(-Math.PI/2);
+  {
+    const pos = groundGeo.attributes.position;
+    const colors = new Float32Array(pos.count*3);
+    for (let i=0; i<pos.count; i++){
+      const x = pos.getX(i), z = pos.getZ(i);
+      const h = getHeight(x,z);
+      pos.setY(i, h);
+      const c = getColor(x,z,h,getBiome(x,z));
+      colors[i*3]=c.r; colors[i*3+1]=c.g; colors[i*3+2]=c.b;
+    }
+    groundGeo.setAttribute('color', new THREE.BufferAttribute(colors,3));
+    pos.needsUpdate = true; groundGeo.computeVertexNormals();
+  }
+  scene.add(new THREE.Mesh(groundGeo, new THREE.MeshLambertMaterial({ vertexColors:true, flatShading:true })));
+
+  const ocean = new THREE.Mesh(new THREE.CircleGeometry(WORLD_RADIUS*2.2, 48), new THREE.MeshPhongMaterial({ color:0x1f6fa8, shininess:60, transparent:true, opacity:0.85 }));
+  ocean.rotation.x = -Math.PI/2; ocean.position.y = -1.4;
+  scene.add(ocean);
+
+  const colliders = [];
+  function addCollider(cx, cz, hw, hd){ colliders.push({ minX:cx-hw, maxX:cx+hw, minZ:cz-hd, maxZ:cz+hd }); }
+  function makeBox(w,h,d,color){ return new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshLambertMaterial({ color, flatShading:true })); }
+
+  // Cathedral & Priest Altar
+  const cathedralGroup = new THREE.Group();
+  let wall = makeBox(1, 11, 32, 0x8a8478); wall.position.set(10, 5.5, 0); cathedralGroup.add(wall); addCollider(10,0,0.6,16);
+  wall = makeBox(1, 11, 32, 0x8a8478); wall.position.set(-10, 5.5, 0); cathedralGroup.add(wall); addCollider(-10,0,0.6,16);
+  wall = makeBox(20, 11, 1, 0x8a8478); wall.position.set(0, 5.5, -16); cathedralGroup.add(wall); addCollider(0,-16,10,0.6);
+  wall = makeBox(8, 11, 1, 0x8a8478); wall.position.set(-6, 5.5, 16); cathedralGroup.add(wall); addCollider(-6,16,4,0.6);
+  wall = makeBox(8, 11, 1, 0x8a8478); wall.position.set(6, 5.5, 16); cathedralGroup.add(wall); addCollider(6,16,4,0.6);
+  scene.add(cathedralGroup);
+
+  const altarPos = new THREE.Vector3(0, 0, -4);
+  const altarGroup = new THREE.Group();
+  altarGroup.add(makeBox(2,1.4,2,0x6b6558));
+  const holyOrb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.7,0), new THREE.MeshPhongMaterial({ color:0x4fd6ff, emissive:0x1f7fa0, shininess:100 }));
+  holyOrb.position.y = 2.2; altarGroup.add(holyOrb);
+  altarGroup.position.copy(altarPos);
+  scene.add(altarGroup);
+
+  // Priest NPC
+  const priestGroup = new THREE.Group();
+  const pBody = makeBox(0.6, 1.2, 0.4, 0xeeeeee); pBody.position.y = 1.4; priestGroup.add(pBody);
+  const pHead = makeBox(0.45, 0.45, 0.45, 0xffccaa); pHead.position.y = 2.15; priestGroup.add(pHead);
+  priestGroup.position.set(0, 0, -9);
+  priestGroup.userData = { isPriest: true };
+  scene.add(priestGroup);
+
+  // City buildings & material nodes
+  const materialNodes = [];
+  function spawnMaterialNode(x, z, type){
+    let col = 0xff0000; // redstone
+    if (type === 'stone') col = 0x888888;
+    if (type === 'gold') col = 0xffd700;
+    if (type === 'emerald') col = 0x00ff66;
+    const mesh = makeBox(0.8, 0.8, 0.8, col);
+    mesh.position.set(x, getHeight(x,z)+0.4, z);
+    scene.add(mesh);
+    materialNodes.push({ mesh, type, x, z });
+  }
+
+  // Scatter material nodes around the biomes
+  for (let i=0; i<40; i++){
+    const a = Math.random()*Math.PI*2;
+    const r = 40 + Math.random()*(WORLD_RADIUS - 50);
+    const x = Math.cos(a)*r, z = Math.sin(a)*r;
+    const types = ['redstone', 'stone', 'gold', 'emerald'];
+    spawnMaterialNode(x, z, types[Math.floor(Math.random()*types.length)]);
+  }
+
+  // =========================================================================================
+  // PIRATE SHIP & SHORE SPAWN (78% Chance, No Pirates on board per prompt rule)
+  // =========================================================================================
+  let pirateShip = null;
+  let pirateSpawnTimer = 0;
+  let piratesActive = false;
+
+  function spawnPirateShip(shoreX, shoreZ){
+    if (pirateShip) return;
+    piratesActive = true;
+    showMessage('🏴 Big Pirate Ship spotted offshore!');
+
+    pirateShip = new THREE.Group();
+    const hull = makeBox(18, 6, 32, 0x4a2e18); hull.position.y = 3; pirateShip.add(hull);
+    const mast = makeBox(1.5, 20, 1.5, 0x221105); mast.position.set(0, 10, 0); pirateShip.add(mast);
+    const sail = makeBox(10, 9, 0.4, 0xf0f0f0); sail.position.set(0, 11, 0); pirateShip.add(sail);
+    const flag = makeBox(2.5, 2, 0.2, 0x111); flag.position.set(0, 20, 0); pirateShip.add(flag);
+
+    const angle = Math.atan2(shoreZ, shoreX);
+    const shipDist = WORLD_RADIUS - 12;
+    pirateShip.position.set(Math.cos(angle)*shipDist, -1.0, Math.sin(angle)*shipDist);
+    scene.add(pirateShip);
+  }
+
+  function checkShorePirates(dt){
+    if (gameMode === 'creative') return;
+    const biome = getBiome(player.x, player.z);
+    if (biome === 'beach'){
+      pirateSpawnTimer += dt;
+      if (pirateSpawnTimer > 5.0 && !piratesActive){
+        pirateSpawnTimer = 0;
+        if (Math.random() < 0.78){
+          spawnPirateShip(player.x, player.z);
+        }
+      }
+    } else {
+      pirateSpawnTimer = 0;
+      if (piratesActive && pirateShip){
+        scene.remove(pirateShip);
+        pirateShip = null;
+        piratesActive = false;
+      }
+    }
+  }
+
+  // =========================================================================================
+  // PLAYER STATE & SETTINGS
+  // =========================================================================================
+  let gameMode = 'survival'; // 'survival' or 'creative'
+  let camPerspective = 1;    // 1 or 3
+
+  const player = {
+    x: 0, z: 78, y: EYE_HEIGHT,
+    velY: 0, grounded: true,
+    health: 100, maxHealth: 100,
+    alive: true,
+    weaponIndex: 0,
+    ammo: WEAPONS[0].mag, reserveAmmo: WEAPONS[0].mag * 4,
+    reloading: false,
+    gold: 0,
+    hasTotem: false,
+    redstoneCount: 0, stoneCount: 0, goldMatCount: 0, emeraldCount: 0,
+    walkTime: 0,
+    clipThrough: false
+  };
+
+  let yaw = Math.PI, pitch = 0;
+  camera.position.set(player.x, player.y, player.z);
+
+  const gunGroup = new THREE.Group();
+  let currentGunMesh = null;
+  function updateWeaponMesh(){
+    if (currentGunMesh) gunGroup.remove(currentGunMesh);
+    const wConfig = WEAPONS[player.weaponIndex];
+    currentGunMesh = makeBox(0.14, 0.14, 0.7, wConfig.color);
+    currentGunMesh.position.set(0.28, -0.22, -0.55);
+    gunGroup.add(currentGunMesh);
+    weaponNameLabel.textContent = wConfig.name;
+    ammoInMagEl.textContent = player.ammo;
+    ammoReserveEl.textContent = player.reserveAmmo;
+  }
+  camera.add(gunGroup);
+  scene.add(camera);
+
+  // =========================================================================================
+  // ZOMBIES
+  // =========================================================================================
+  const zombies = [];
+  function createZombie(x, z){
+    const group = new THREE.Group();
+    const skinMat = new THREE.MeshLambertMaterial({ color: 0x4a7a4a });
+    const clothMat = new THREE.MeshLambertMaterial({ color: 0x334455 });
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.0, 0.42), clothMat); torso.position.y = 1.55; group.add(torso);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat); head.position.y = 2.3; group.add(head);
+    group.position.set(x, getHeight(x,z), z);
+    group.userData = { isZombie: true, health: 100, speed: 1.6 + Math.random()*1.2, state: 'active' };
+    scene.add(group);
+    zombies.push(group);
+  }
+
+  // =========================================================================================
+  // GRENADES & BOMBS
+  // =========================================================================================
+  const grenades = [];
+  function throwGrenade(){
+    const gMesh = makeBox(0.3, 0.3, 0.3, 0x111111);
+    gMesh.position.copy(camera.position);
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    const vel = dir.multiplyScalar(22).add(new THREE.Vector3(0,5,0));
+    scene.add(gMesh);
+    grenades.push({ mesh: gMesh, vel, timer: 2.2 });
+    playShootSound();
+    showMessage('Grenade thrown!');
+  }
+
+  // =========================================================================================
+  // COLLISION & MOVEMENT
+  // =========================================================================================
+  function resolveCollisions(pos, radius){
+    if (player.clipThrough || gameMode === 'creative') return;
+    for (let i=0; i<colliders.length; i++){
+      const b = colliders[i];
+      const minX = b.minX-radius, maxX = b.maxX+radius, minZ = b.minZ-radius, maxZ = b.maxZ+radius;
+      if (pos.x > minX && pos.x < maxX && pos.z > minZ && pos.z < maxZ){
+        const ox = Math.min(pos.x - minX, maxX - pos.x);
+        const oz = Math.min(pos.z - minZ, maxZ - pos.z);
+        const mx = (b.minX+b.maxX)/2, mz = (b.minZ+b.maxZ)/2;
+        if (ox < oz) pos.x += (pos.x < mx ? -ox : ox);
+        else pos.z += (pos.z < mz ? -oz : oz);
+      }
+    }
+  }
+
+  // =========================================================================================
+  // INPUTS & UI FLOW
+  // =========================================================================================
+  const keys = { forward: false, back: false, left: false, right: false };
+  let isFiring = false, fireCooldown = 0, pointerLocked = false;
+
+  singleplayerBtn.addEventListener('click', ()=>{ mainMenuScreen.classList.add('hidden'); createWorldScreen.classList.remove('hidden'); });
+  optionsBtn.addEventListener('click', ()=>{ mainMenuScreen.classList.add('hidden'); optionsScreen.classList.remove('hidden'); });
+  cancelCreateBtn.addEventListener('click', ()=>{ createWorldScreen.classList.add('hidden'); mainMenuScreen.classList.remove('hidden'); });
+  backOptionsBtn.addEventListener('click', ()=>{ optionsScreen.classList.add('hidden'); mainMenuScreen.classList.remove('hidden'); });
+
+  createWorldBtn.addEventListener('click', ()=>{
+    gameMode = document.getElementById('gameModeSelect').value;
+    camPerspective = parseInt(document.getElementById('camPerspectiveSelect').value);
+    createWorldScreen.classList.add('hidden');
+    startGame();
+  });
+
+  resumeBtn.addEventListener('click', requestLock);
+  menuBtn.addEventListener('click', returnToTitle);
+  restartBtnDead.addEventListener('click', ()=>{ restartGame(); requestLock(); });
+  titleBtnDead.addEventListener('click', returnToTitle);
+  restartBtnWin.addEventListener('click', ()=>{ restartGame(); requestLock(); });
+  titleBtnWin.addEventListener('click', returnToTitle);
+
+  function returnToTitle(){
+    document.exitPointerLock && document.exitPointerLock();
+    pauseScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+    victoryScreen.classList.add('hidden');
+    hud.classList.add('hidden');
+    mainMenuScreen.classList.remove('hidden');
+  }
+
+  function requestLock(){
+    ensureAudio();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    if (!isTouchDevice){
+      canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock;
+      canvas.requestPointerLock();
+    } else {
+      pauseScreen.classList.add('hidden');
+      hud.classList.remove('hidden');
+    }
+  }
+
+  function startGame(){
+    hud.classList.remove('hidden');
+    player.x = 0; player.z = 78; player.y = EYE_HEIGHT;
+    player.health = player.maxHealth = (gameMode === 'creative' ? 99999 : 100);
+    player.alive = true;
+    player.gold = 50;
+    player.hasTotem = false;
+    player.redstoneCount = gameMode === 'creative' ? 10 : 0;
+    player.stoneCount = gameMode === 'creative' ? 10 : 0;
+    player.goldMatCount = gameMode === 'creative' ? 10 : 0;
+    player.emeraldCount = gameMode === 'creative' ? 10 : 0;
+    updateWeaponMesh();
+    requestLock();
+  }
+
+  document.addEventListener('keydown', (e)=>{
+    if (e.code === 'KeyW') keys.forward = true;
+    if (e.code === 'KeyS') keys.back = true;
+    if (e.code === 'KeyA') keys.left = true;
+    if (e.code === 'KeyD') keys.right = true;
+    if (e.code === 'Space') { e.preventDefault(); if(gameMode==='creative') player.velY = JUMP_SPEED; else if(player.grounded){ player.velY=JUMP_SPEED; player.grounded=false;} }
+    if (e.code === 'KeyR') reloadWeapon();
+    if (e.code === 'KeyF') interactAction();
+    if (e.code === 'KeyG') throwGrenade();
+    if (e.code === 'KeyC') { player.weaponIndex = (player.weaponIndex + 1) % WEAPONS.length; updateWeaponMesh(); showMessage(`Weapon: ${WEAPONS[player.weaponIndex].name}`); }
+    if (e.code === 'KeyV') { player.clipThrough = !player.clipThrough; showMessage(`Walk through walls: ${player.clipThrough?'ON':'OFF'}`); }
+  });
+
+  document.addEventListener('keyup', (e)=>{
+    if (e.code === 'KeyW') keys.forward = false;
+    if (e.code === 'KeyS') keys.back = false;
+    if (e.code === 'KeyA') keys.left = false;
+    if (e.code === 'KeyD') keys.right = false;
+  });
+
+  canvas.addEventListener('mousedown', (e)=>{ if(e.button===0) isFiring=true; });
+  canvas.addEventListener('mouseup', (e)=>{ if(e.button===0) isFiring=false; });
+
+  document.addEventListener('mousemove', (e)=>{
+    if (document.pointerLockElement !== canvas && !isTouchDevice) return;
+    const sens = 0.0022;
+    yaw -= e.movementX * sens;
+    pitch -= e.movementY * sens;
+    pitch = Math.max(-Math.PI/2+0.02, Math.min(Math.PI/2-0.02, pitch));
+  });
+
+  function shootWeapon(){
+    if (player.reloading) return;
+    const wConfig = WEAPONS[player.weaponIndex];
+    if (player.ammo <= 0){ reloadWeapon(); return; }
+    fireCooldown = wConfig.rate;
+    player.ammo--;
+    updateWeaponMesh();
+    playShootSound();
+
+    if (wConfig.name.includes("Holy Water")){
+      // Throw Holy Water flask to heal zombies!
+      const ray = new THREE.Raycaster();
+      ray.setFromCamera(new THREE.Vector2(0,0), camera);
+      const hits = ray.intersectObjects(zombies, true);
+      if (hits.length > 0 && hits[0].distance < 30){
+        let zObj = hits[0].object; while(zObj && !zObj.userData.isZombie) zObj = zObj.parent;
+        if(zObj){
+          scene.remove(zObj);
+          zombies.splice(zombies.indexOf(zObj), 1);
+          playCureSound();
+          showMessage('Zombie healed & cured with Holy Water!');
+        }
+      }
+      return;
+    }
+
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(0,0), camera);
+    const hits = ray.intersectObjects(zombies, true);
+    if (hits.length > 0 && hits[0].distance < 120){
+      let zObj = hits[0].object; while(zObj && !zObj.userData.isZombie) zObj = zObj.parent;
+      if (zObj){
+        zObj.userData.health -= wConfig.damage;
+        playHitSound();
+        if (zObj.userData.health <= 0){
+          scene.remove(zObj);
+          zombies.splice(zombies.indexOf(zObj), 1);
+          showMessage('Zombie eliminated!');
+        }
+      }
+    }
+  }
+
+  function reloadWeapon(){
+    if (player.reloading || player.ammo >= WEAPONS[player.weaponIndex].mag || player.reserveAmmo <= 0) return;
+    player.reloading = true;
+    reloadTag.classList.remove('hidden');
+    playReloadSound();
+    setTimeout(()=>{
+      const wConfig = WEAPONS[player.weaponIndex];
+      const need = wConfig.mag - player.ammo;
+      const take = Math.min(need, player.reserveAmmo);
+      player.ammo += take; player.reserveAmmo -= take;
+      player.reloading = false;
+      reloadTag.classList.add('hidden');
+      updateWeaponMesh();
+    }, WEAPONS[player.weaponIndex].reload * 1000);
+  }
+
+  function interactAction(){
+    // Check material pickups
+    for (let i=materialNodes.length-1; i>=0; i--){
+      const m = materialNodes[i];
+      if (Math.hypot(player.x - m.x, player.z - m.z) < 2.5){
+        if (m.type === 'redstone') player.redstoneCount++;
+        else if (m.type === 'stone') player.stoneCount++;
+        else if (m.type === 'gold') player.goldMatCount++;
+        else if (m.type === 'emerald') player.emeraldCount++;
+        scene.remove(m.mesh);
+        materialNodes.splice(i, 1);
+        playPickupSound();
+        showMessage(`Collected ${m.type}!`);
+        updateHUD();
+        return;
+      }
+    }
+
+    // Check Priest Blessing for Totem of Undying
+    if (Math.hypot(player.x - priestGroup.position.x, player.z - priestGroup.position.z) < 4.0){
+      if (player.hasTotem){ showMessage('You already possess a Totem of Undying!'); return; }
+      if (player.redstoneCount >= 1 && player.stoneCount >= 1 && player.goldMatCount >= 1 && player.emeraldCount >= 1){
+        player.redstoneCount--; player.stoneCount--; player.goldMatCount--; player.emeraldCount--;
+        player.hasTotem = true;
+        playCureSound();
+        showMessage('✨ Priest blessed your materials into a TOTEM OF UNDYING!');
+        updateHUD();
+      } else {
+        showMessage('Priest: "Bring 1 Redstone, 1 Stone, 1 Gold, 1 Emerald to craft the Totem!"');
+      }
+      return;
+    }
+  }
+
+  function updateHUD(){
+    const pct = Math.max(0, player.health/player.maxHealth*100);
+    healthBarInner.style.width = pct + '%';
+    healthNum.textContent = Math.ceil(player.health);
+    goldNumEl.textContent = player.gold;
+    totemStatusEl.innerHTML = player.hasTotem ? '<span style="color:#55ff55">ACTIVE</span>' : '<span style="color:#ff3b3b">None</span>';
+    matsListEl.textContent = `Red:${player.redstoneCount} | Stn:${player.stoneCount} | Gld:${player.goldMatCount} | Emr:${player.emeraldCount}`;
+    biomeNameEl.textContent = getBiomeLabel(getBiome(player.x, player.z));
+  }
+
+  function restartGame(){
+    player.health = player.maxHealth;
+    player.alive = true;
+    player.x = 0; player.z = 78; player.y = EYE_HEIGHT;
+    gameOverScreen.classList.add('hidden');
+    victoryScreen.classList.add('hidden');
+  }
+
+  // =========================================================================================
+  // MAIN ANIMATION LOOP
+  // =========================================================================================
+  const clock = new THREE.Clock();
+
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt = Math.min(clock.getDelta(), 0.05);
+
+    if (fireCooldown > 0) fireCooldown -= dt;
+
+    if (player.alive && document.pointerLockElement === canvas || isTouchDevice){
+      camera.rotation.y = yaw; camera.rotation.x = pitch;
+
+      const fwd = new THREE.Vector3(); camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
+      const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0,1,0)).normalize();
+      let mx = 0, mz = 0;
+      if (keys.forward) mz += 1; if (keys.back) mz -= 1; if (keys.right) mx += 1; if (keys.left) mx -= 1;
+
+      if (mx !== 0 || mz !== 0){
+        const len = Math.hypot(mx,mz); mx/=len; mz/=len;
+        const dx = (fwd.x*mz + right.x*mx) * WALK_SPEED * dt;
+        const dz = (fwd.z*mz + right.z*mx) * WALK_SPEED * dt;
+        const tmp = { x: player.x + dx, z: player.z + dz };
+        resolveCollisions(tmp, PLAYER_RADIUS);
+        player.x = tmp.x; player.z = tmp.z;
+      }
+
+      if (gameMode === 'creative'){
+        player.y += (keys.forward ? 0 : 0); // flying in creative handled via space/crouch or simple elevation
+      } else {
+        const groundY = getHeight(player.x, player.z) + EYE_HEIGHT;
+        player.velY += GRAVITY * dt;
+        player.y += player.velY * dt;
+        if (player.y <= groundY){ player.y = groundY; player.velY = 0; player.grounded = true; }
+        else player.grounded = false;
+      }
+
+      // Camera Perspective handling (1st vs 3rd person)
+      if (camPerspective === 3){
+        const backOffset = new THREE.Vector3(0, 1.2, -3.5).applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+        camera.position.copy(new THREE.Vector3(player.x, player.y, player.z).add(backOffset));
+        gunGroup.visible = false;
+      } else {
+        camera.position.set(player.x, player.y, player.z);
+        gunGroup.visible = true;
+      }
+
+      if (isFiring && fireCooldown <= 0) shootWeapon();
+      checkShorePirates(dt);
+
+      // Update Grenades
+      for (let i=grenades.length-1; i>=0; i--){
+        const g = grenades[i];
+        g.timer -= dt;
+        g.vel.y += GRAVITY * dt;
+        g.mesh.position.addScaledVector(g.vel, dt);
+        if (g.timer <= 0){
+          playExplosionSound();
+          scene.remove(g.mesh);
+          grenades.splice(i,1);
+          // Kill nearby zombies
+          for (let zIndex=zombies.length-1; zIndex>=0; zIndex--){
+            if (g.mesh.position.distanceTo(zombies[zIndex].position) < 8){
+              scene.remove(zombies[zIndex]);
+              zombies.splice(zIndex, 1);
+            }
+          }
+        }
+      }
+
+      // Zombie AI
+      if (zombies.length < 10 && Math.random() < 0.03){
+        const a = Math.random()*Math.PI*2, r = 30 + Math.random()*50;
+        createZombie(player.x + Math.cos(a)*r, player.z + Math.sin(a)*r);
+      }
+      for (const z of zombies){
+        const dx = player.x - z.position.x, dz = player.z - z.position.z;
+        const dist = Math.hypot(dx,dz);
+        if (dist < 45 && dist > 1.8){
+          z.position.x += (dx/dist) * z.userData.speed * dt;
+          z.position.z += (dz/dist) * z.userData.speed * dt;
+          z.position.y = getHeight(z.position.x, z.position.z);
+          z.rotation.y = Math.atan2(dx, dz);
+        }
+        if (dist < 2.0 && gameMode !== 'creative'){
+          player.health -= 12 * dt;
+          updateHUD();
+          if (player.health <= 0){
+            if (player.hasTotem){
+              player.hasTotem = false;
+              player.health = player.maxHealth;
+              playCureSound();
+              showMessage('✨ TOTEM OF UNDYING saved you from death!');
+              updateHUD();
+            } else {
+              player.alive = false;
+              document.exitPointerLock && document.exitPointerLock();
+              gameOverStats.textContent = `You were overrun by the horde!`;
+              gameOverScreen.classList.remove('hidden');
+            }
+          }
+        }
+      }
+
+      updateHUD();
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+} catch(err){
+  console.error(err);
+  document.body.innerHTML = '<div style="color:red;padding:40px;">Error initializing game: ' + err.message + '</div>';
+}
+
+})();
+</script>
+</body>
+</html>
